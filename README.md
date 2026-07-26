@@ -40,14 +40,14 @@ An ultra-lightweight performance monitor exclusively designed for Windows 11. Bu
 
 Visit the **Releases** page to download the package that best suits your computer:
 
-### 1. 🧙‍♂️ Setup Installer (Recommended for standard users)
+### 1.  Setup Installer (Recommended for standard users)
 Download **`NavTask_Setup_v10.3.exe`**
 - Interactive Windows installation wizard powered by Inno Setup.
 - Installs cleanly to User space (No Admin rights or UAC prompts required).
 - Optional automated startup checkmark so NavTask wakes up automatically on computer boot.
 - Registers in Windows *Add/Remove Programs* for convenient 1-click uninstallation.
 
-### 2. ⚡ Standalone Portable Binary (No install needed)
+### 2.  Standalone Portable Binary (No install needed)
 Download **`NavTask_Portable_v10.3.exe`**
 - Zero installation required. Just drop it anywhere in your personal documents or desktop and double-click to run!
 - Includes a built-in **"Start with Windows"** switch directly inside the right-click context menu using native Windows Registry autostart integration.
