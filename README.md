@@ -1,6 +1,6 @@
-# 🚀 NavTask Monitor for Windows 11
+# NavTask Monitor for Windows 11
 
-An ultra-lightweight, high-precision taskbar performance monitor exclusively designed for Windows 11. Built natively in **C (Win32 API & PDH Kernel Engine)** with **Zero Dependencies**, consuming less than **7 MB of RAM** and practically zero CPU overhead.
+An ultra-lightweight performance monitor exclusively designed for Windows 11. Built natively in **C (Win32 API & PDH Kernel Engine)** with **Zero Dependencies**, consuming less than **7 MB of RAM** and practically zero CPU overhead.
 
 ![Windows 11 Native](https://img.shields.io/badge/Windows_11-Compatible-0078D4?style=for-the-badge&logo=windows)
 ![C Win32 API](https://img.shields.io/badge/Language-C%20(Win32)-00599C?style=for-the-badge&logo=c)
