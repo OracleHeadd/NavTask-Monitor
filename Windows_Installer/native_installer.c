@@ -59,7 +59,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 2. Standard Installation Wizard Flow
     int resp = MessageBoxW(NULL, 
-        L"Welcome to NavTask Monitor v10.2 Setup for Windows 11 & 10!\n\n"
+        L"Welcome to NavTask Monitor v10.3 Setup for Windows 11 & 10!\n\n"
         L"Developer: Mauro Carvalho (mauroroberto83@gmail.com)\n"
         L"License: 100% Freeware (Open-Source)\n\n"
         L"Once installed, NavTask Monitor becomes an ultra-lightweight telemetry fixture on your Windows Taskbar that wakes up automatically with your computer.\n\n"
@@ -92,7 +92,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GetCurrentDirectoryW(MAX_PATH, currentDir);
 
     wchar_t srcExe[MAX_PATH];
-    swprintf_s(srcExe, MAX_PATH, L"%s\\..\\Release\\NavTask_Portable_v10.0.exe", currentDir);
+    swprintf_s(srcExe, MAX_PATH, L"%s\\..\\Release\\NavTask_Portable_v10.3.exe", currentDir);
     if (GetFileAttributesW(srcExe) == INVALID_FILE_ATTRIBUTES) {
         swprintf_s(srcExe, MAX_PATH, L"%s\\..\\NavTask.exe", currentDir);
         if (GetFileAttributesW(srcExe) == INVALID_FILE_ATTRIBUTES) {
@@ -105,11 +105,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     Sleep(500);
 
     if (!CopyFileW(srcExe, destExe, FALSE)) {
-        CopyFileW(L".\\Release\\NavTask_Portable_v10.0.exe", destExe, FALSE);
+        CopyFileW(L".\\Release\\NavTask_Portable_v10.3.exe", destExe, FALSE);
     }
 
     if (GetFileAttributesW(destExe) == INVALID_FILE_ATTRIBUTES) {
-        MessageBoxW(NULL, L"Could not copy NavTask executable to target installation directory.\nPlease ensure NavTask_Portable_v10.0.exe exists in the Release folder.", 
+        MessageBoxW(NULL, L"Could not copy NavTask executable to target installation directory.\nPlease ensure NavTask_Portable_v10.3.exe exists in the Release folder.", 
                     L"Installation Error", MB_OK | MB_ICONERROR);
         return 1;
     }
@@ -126,7 +126,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Register in Windows "Add/Remove Programs" (appwiz.cpl) with embedded icon
     if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NavTask", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
         RegSetValueExW(hKey, L"DisplayName", 0, REG_SZ, (const BYTE*)L"NavTask Monitor (by Mauro Carvalho)", (DWORD)(wcslen(L"NavTask Monitor (by Mauro Carvalho)") + 1) * sizeof(wchar_t));
-        RegSetValueExW(hKey, L"DisplayVersion", 0, REG_SZ, (const BYTE*)L"10.2.0.0", (DWORD)(wcslen(L"10.2.0.0") + 1) * sizeof(wchar_t));
+        RegSetValueExW(hKey, L"DisplayVersion", 0, REG_SZ, (const BYTE*)L"10.3.0.0", (DWORD)(wcslen(L"10.3.0.0") + 1) * sizeof(wchar_t));
         RegSetValueExW(hKey, L"Publisher", 0, REG_SZ, (const BYTE*)L"Mauro Carvalho", (DWORD)(wcslen(L"Mauro Carvalho") + 1) * sizeof(wchar_t));
         RegSetValueExW(hKey, L"DisplayIcon", 0, REG_SZ, (const BYTE*)destExe, (DWORD)(wcslen(destExe) + 1) * sizeof(wchar_t));
         

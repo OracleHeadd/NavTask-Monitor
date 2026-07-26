@@ -121,6 +121,31 @@ BOOL IsFullscreenOverlayActive(HWND hwndMy) {
     if (!hForeground || hForeground == hwndMy) return FALSE;
 
     HWND hTray = FindWindowW(L"Shell_TrayWnd", NULL);
+    if (hTray) {
+        // Check if Windows Auto-Hide Taskbar is active, sliding down, or retracted off-screen.
+        // We check if visible height/width <= 38px or if tray boundaries protrude past monitor limits.
+        // This cuts off NavTask instantaneously without any awkward sliding animation as the bar retracts!
+        HMONITOR hMonTray = MonitorFromWindow(hTray, MONITOR_DEFAULTTOPRIMARY);
+        if (hMonTray) {
+            MONITORINFO miTray = {0};
+            miTray.cbSize = sizeof(MONITORINFO);
+            if (GetMonitorInfoW(hMonTray, &miTray)) {
+                RECT rcTray = {0};
+                if (GetWindowRect(hTray, &rcTray)) {
+                    RECT rcIntersect = {0};
+                    IntersectRect(&rcIntersect, &miTray.rcMonitor, &rcTray);
+                    int visibleWidth = rcIntersect.right - rcIntersect.left;
+                    int visibleHeight = rcIntersect.bottom - rcIntersect.top;
+                    if (visibleWidth <= 38 || visibleHeight <= 38 ||
+                        rcTray.bottom > miTray.rcMonitor.bottom || rcTray.top < miTray.rcMonitor.top ||
+                        rcTray.right > miTray.rcMonitor.right || rcTray.left < miTray.rcMonitor.left) {
+                        return TRUE;
+                    }
+                }
+            }
+        }
+    }
+
     if (hForeground == hTray || IsChild(hTray, hForeground)) return FALSE;
 
     DWORD pid = 0;
@@ -195,6 +220,44 @@ BOOL IsFullscreenOverlayActive(HWND hwndMy) {
             wcsstr(title, L"Captura de tela") || wcsstr(title, L"Recorte e Esboço") ||
             wcsstr(title, L"Lightshot") || wcsstr(title, L"Greenshot") || wcsstr(title, L"ShareX")) {
             return TRUE;
+        }
+    }
+
+    // Check if the foreground window is running in fullscreen mode (Games like CS, YouTube, Netflix, etc.)
+    // We use GetClientRect + ClientToScreen because in Win10/11 standard Maximized windows bleed non-client borders 
+    // outside monitor dimensions (-8, -8, 1928, 1088), fooling GetWindowRect. Client area accurately stops at Taskbar lip.
+    HMONITOR hMonTray = MonitorFromWindow(hTray, MONITOR_DEFAULTTOPRIMARY);
+    HMONITOR hMonFg = MonitorFromWindow(hForeground, MONITOR_DEFAULTTONULL);
+    if (hMonTray && hMonFg && hMonTray == hMonFg) {
+        MONITORINFO mi = {0};
+        mi.cbSize = sizeof(MONITORINFO);
+        if (GetMonitorInfoW(hMonFg, &mi)) {
+            RECT rcClient = {0};
+            if (GetClientRect(hForeground, &rcClient)) {
+                POINT ptTopLeft = { rcClient.left, rcClient.top };
+                POINT ptBottomRight = { rcClient.right, rcClient.bottom };
+                ClientToScreen(hForeground, &ptTopLeft);
+                ClientToScreen(hForeground, &ptBottomRight);
+                if (ptTopLeft.x <= mi.rcMonitor.left &&
+                    ptTopLeft.y <= mi.rcMonitor.top &&
+                    ptBottomRight.x >= mi.rcMonitor.right &&
+                    ptBottomRight.y >= mi.rcMonitor.bottom) {
+                    return TRUE;
+                }
+                // Check if Windowed Mode games (like Dark Souls II or borderless windows) overlap/cover the Taskbar area
+                RECT rcTray = {0};
+                if (GetWindowRect(hTray, &rcTray)) {
+                    RECT rcClientScreen = { ptTopLeft.x, ptTopLeft.y, ptBottomRight.x, ptBottomRight.y };
+                    RECT rcIntersect = {0};
+                    if (IntersectRect(&rcIntersect, &rcTray, &rcClientScreen)) {
+                        int overlapHeight = rcIntersect.bottom - rcIntersect.top;
+                        int overlapWidth = rcIntersect.right - rcIntersect.left;
+                        if (overlapHeight > 2 && overlapWidth > 50) {
+                            return TRUE;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -647,7 +710,7 @@ void RepositionOnTaskbar(HWND hwnd) {
         return;
     }
 
-    if (!IsWindowVisible(hwnd) && !IsFullscreenOverlayActive(hwnd)) {
+    if (!IsWindowVisible(hwnd)) {
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
 
@@ -811,7 +874,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             int id = LOWORD(wParam);
             if (id == IDM_ABOUT) {
                 MessageBoxW(hwnd, 
-                    L"NavTask Monitor v10.2 for Windows 11\n\n"
+                    L"NavTask Monitor v10.3 for Windows 11\n\n"
                     L"Developed by: Mauro Carvalho\n"
                     L"Contact / Support: mauroroberto83@gmail.com\n"
                     L"License: Open-Source (Freeware / MIT)\n\n"

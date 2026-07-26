@@ -3,7 +3,7 @@
 ; Standard Modern Setup Wizard for Windows 10 & 11
 
 #define MyAppName "NavTask Monitor"
-#define MyAppVersion "10.2"
+#define MyAppVersion "10.3"
 #define MyAppPublisher "Mauro Carvalho"
 #define MyAppURL "mailto:mauroroberto83@gmail.com"
 #define MyAppExeName "NavTask.exe"
@@ -23,7 +23,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
 OutputDir=..\Release
-OutputBaseFilename=NavTask_Setup_v10.2
+OutputBaseFilename=NavTask_Setup_v10.3
 SetupIconFile=..\navtask.ico
 UninstallDisplayIcon={app}\navtask.ico
 AppMutex=NavTask_SingleInstance_Mutex
@@ -42,7 +42,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Start NavTask automatically when Windows starts (Recommended)"; GroupDescription: "Windows Boot Option:"
 
 [Files]
-Source: "..\Release\NavTask_Portable_v10.0.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+Source: "..\Release\NavTask_Portable_v10.3.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 Source: "..\navtask.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
