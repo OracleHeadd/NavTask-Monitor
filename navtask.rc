@@ -1,0 +1,44 @@
+#include <windows.h>
+1 ICON "navtask.ico"
+
+#define VER_FILEVERSION             10,2,0,0
+#define VER_FILEVERSION_STR         "10.2.0.0\0"
+#define VER_PRODUCTVERSION          10,2,0,0
+#define VER_PRODUCTVERSION_STR      "10.2\0"
+#define VER_COMPANYNAME_STR         "Mauro Carvalho\0"
+#define VER_FILEDESCRIPTION_STR     "NavTask Monitor for Windows 11 Taskbar\0"
+#define VER_INTERNALNAME_STR        "NavTask\0"
+#define VER_LEGALCOPYRIGHT_STR      "Copyright (C) 2026 Mauro Carvalho (mauroroberto83@gmail.com). All rights reserved.\0"
+#define VER_ORIGINALFILENAME_STR    "NavTask.exe\0"
+#define VER_PRODUCTNAME_STR         "NavTask Monitor\0"
+
+1 VERSIONINFO
+FILEVERSION VER_FILEVERSION
+PRODUCTVERSION VER_PRODUCTVERSION
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      VER_COMPANYNAME_STR
+            VALUE "FileDescription",  VER_FILEDESCRIPTION_STR
+            VALUE "FileVersion",      VER_FILEVERSION_STR
+            VALUE "InternalName",     VER_INTERNALNAME_STR
+            VALUE "LegalCopyright",   VER_LEGALCOPYRIGHT_STR
+            VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
+            VALUE "ProductName",      VER_PRODUCTNAME_STR
+            VALUE "ProductVersion",   VER_PRODUCTVERSION_STR
+            VALUE "Developer",        "Mauro Carvalho\0"
+            VALUE "Contact",          "mauroroberto83@gmail.com\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

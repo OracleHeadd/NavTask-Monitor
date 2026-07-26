@@ -1,0 +1,32 @@
+# Compiled Binaries and Executables
+*.exe
+*.o
+*.obj
+*.res
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.so
+
+# User settings, caches, and temporary config
+*.ini
+*.log
+*.tmp
+*.bak
+*~
+
+# Release and Build Output folders (Published via GitHub Releases)
+Release/
+Output/
+Windows_Installer/Output/
+
+# IDE, Editor & OS Configuration files
+.vscode/
+.idea/
+*.suo
+*.user
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
