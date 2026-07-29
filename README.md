@@ -50,20 +50,11 @@ An ultra-lightweight performance telemetry utility engineered specifically for W
 
 ---
 
-## Installation & Deployment Mechanics
-
-Two deployment variants are published in the Release repository:
-
-### 1. Setup Installer (NavTask_Setup_v10.4.exe)
+### Setup Installer (NavTask_Setup_v10.4.exe)
 - Compiled via the modern Inno Setup 6 engine with full WizardStyle implementation.
 - Dual Installation Scopes: Offers interactive initial selection between "Install for me only" (deploys to user local profile without Administrator elevation requirements) and "Install for all users" (system-wide deployment to Program Files).
 - Registers standard system uninstallation procedures natively within Windows Settings and Add/Remove Programs (appwiz.cpl).
 - Configures optional automatic system startup persistence through standard Windows registry run keys during installation.
-
-### 2. Standalone Portable Binary (NavTask_Portable_v10.4.exe)
-- Requires zero installation procedures. Executes as a fully contained single binary from any arbitrary filesystem location.
-- Provides an optional embedded option within the right-click context menu to register automated Windows boot execution.
-- Generates all local configurations cleanly inside a lightweight initialization file (navtask.ini).
 
 ---
 
