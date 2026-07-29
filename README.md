@@ -2,6 +2,14 @@
 
 An ultra-lightweight performance telemetry utility engineered specifically for Windows 11 and Windows 10. Built natively in C using Win32 API, DXGI, NVML, and the Windows Performance Data Helper (PDH) kernel engine. Operates with zero external dependency runtimes and a minimal footprint of under 25 MB RAM.
 
+###### Works well with Windows 11 25H2 features or earlier versions. Not tested on small screens. ######
+
+![Windows 11 Compatible](https://img.shields.io/badge/Windows_11-Compatible-0078D4?style=for-the-badge&logo=windows)
+![Windows 10 Compatible](https://img.shields.io/badge/Windows_10-Compatible-0078D4?style=for-the-badge&logo=windows)
+![C Win32 API](https://img.shields.io/badge/Language-C%20(Win32)-00599C?style=for-the-badge&logo=c)
+![RAM Footprint](https://img.shields.io/badge/RAM-%3C_25_MB-00C853?style=for-the-badge)
+![License MIT](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)
+
 ---
 
 ## Developer & Authorship
