@@ -23,7 +23,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=..\LICENSE
 OutputDir=..\Release
-OutputBaseFilename=NavTask_Setup_v10.3
+OutputBaseFilename=NavTask_Setup_v10.4
 SetupIconFile=..\navtask.ico
 UninstallDisplayIcon={app}\navtask.ico
 AppMutex=NavTask_SingleInstance_Mutex
@@ -42,7 +42,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Start NavTask automatically when Windows starts (Recommended)"; GroupDescription: "Windows Boot Option:"
 
 [Files]
-Source: "..\Release\NavTask_Portable_v10.3.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+Source: "..\Release\NavTask_Portable_v10.4.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 Source: "..\navtask.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
