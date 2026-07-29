@@ -2,6 +2,8 @@
 
 An ultra-lightweight performance telemetry utility engineered specifically for Windows 11 and Windows 10. Built natively in C using Win32 API, DXGI, NVML, and the Windows Performance Data Helper (PDH) kernel engine. Operates with zero external dependency runtimes and a minimal footprint of under 25 MB RAM.
 
+**Good for dual-monitor setups, since NavTask is designed so that it never disappears from the screen.** Even though it is always displayed on your screen, it features a true "click-through" design that doesn't interfere with your workflow, and can be easily moved and positioned anywhere you prefer.
+
 ###### Works well with Windows 11 25H2 features or earlier versions. Not tested on small screens. ######
 
 ![Windows 11 Compatible](https://img.shields.io/badge/Windows_11-Compatible-0078D4?style=for-the-badge&logo=windows)
