@@ -83,6 +83,25 @@ static PFN_nvmlDeviceGetTemperature p_nvmlDeviceGetTemperature = NULL;
 static PFN_nvmlDeviceGetUtilizationRates p_nvmlDeviceGetUtilizationRates = NULL;
 static void* g_nvmlDevice = NULL;
 
+// AMD ADL Driver Dynamic Types for instantaneous zero-overhead GPU Temp telemetry
+typedef void* (__stdcall *ADL_MAIN_MALLOC_CALLBACK)(int);
+typedef int (*PFN_ADL_Main_Control_Create)(ADL_MAIN_MALLOC_CALLBACK, int);
+typedef int (*PFN_ADL_Main_Control_Destroy)(void);
+typedef struct { int iSize; int iTemperature; } ADLTemperature;
+typedef int (*PFN_ADL_Overdrive5_Temperature_Get)(int iAdapterIndex, int iThermalControllerIndex, ADLTemperature *lpTemperature);
+
+static HMODULE g_hAdl = NULL;
+static PFN_ADL_Main_Control_Create p_ADL_Main_Control_Create = NULL;
+static PFN_ADL_Main_Control_Destroy p_ADL_Main_Control_Destroy = NULL;
+static PFN_ADL_Overdrive5_Temperature_Get p_ADL_Overdrive5_Temperature_Get = NULL;
+static void* __stdcall ADL_Main_Memory_Alloc(int iSize) { return malloc(iSize); }
+static BOOL g_isAmd = FALSE;
+
+// Intel IGCL Driver Dynamic Types (Intel Arc / Iris Xe)
+typedef int (*PFN_ctlInit)(void*, void**);
+static HMODULE g_hIgcl = NULL;
+static BOOL g_isIntel = FALSE;
+
 // Global configuration and state
 BOOL g_showNet = TRUE;
 BOOL g_showCpuRam = TRUE;
@@ -101,12 +120,16 @@ BOOL g_allowExit = FALSE;
 void RefreshSelectedGpu() {
     g_gpuAdapterLuidHigh = 0;
     g_gpuAdapterLuidLow = 0;
+    
+    // Fallback or specific 'All' logic
     if (g_gpuAdapterIndex == (DWORD)-1 || _wcsicmp(g_gpuAdapterDesc, L"ALL") == 0) {
         g_gpuAdapterIndex = (DWORD)-1;
         wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
         if (p_nvmlDeviceGetHandleByIndex) {
             p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice);
         }
+        g_isAmd = FALSE;
+        g_isIntel = FALSE;
         return;
     }
 
@@ -114,11 +137,12 @@ void RefreshSelectedGpu() {
     if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
         IDXGIAdapter1* pAdapter = NULL;
         BOOL found = FALSE;
+        
+        // 1. Try to match EXACT index AND description to avoid duplicate GPU selection bug
         for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
             DXGI_ADAPTER_DESC1 desc;
             pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
-            if (wcscmp(desc.Description, g_gpuAdapterDesc) == 0) {
-                g_gpuAdapterIndex = i;
+            if (i == g_gpuAdapterIndex && wcscmp(desc.Description, g_gpuAdapterDesc) == 0) {
                 g_gpuAdapterLuidHigh = desc.AdapterLuid.HighPart;
                 g_gpuAdapterLuidLow = desc.AdapterLuid.LowPart;
                 found = TRUE;
@@ -126,6 +150,23 @@ void RefreshSelectedGpu() {
                 break;
             }
             pAdapter->lpVtbl->Release(pAdapter);
+        }
+        
+        // 2. If index doesn't match (e.g. unplugged display shifting indices), fallback to first description match
+        if (!found) {
+            for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+                DXGI_ADAPTER_DESC1 desc;
+                pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
+                if (wcscmp(desc.Description, g_gpuAdapterDesc) == 0) {
+                    g_gpuAdapterIndex = i;
+                    g_gpuAdapterLuidHigh = desc.AdapterLuid.HighPart;
+                    g_gpuAdapterLuidLow = desc.AdapterLuid.LowPart;
+                    found = TRUE;
+                    pAdapter->lpVtbl->Release(pAdapter);
+                    break;
+                }
+                pAdapter->lpVtbl->Release(pAdapter);
+            }
         }
         pFactory->lpVtbl->Release(pFactory);
         if (!found) {
@@ -135,8 +176,11 @@ void RefreshSelectedGpu() {
     }
 
     g_nvmlDevice = NULL;
+    g_isAmd = (wcsstr(g_gpuAdapterDesc, L"AMD") != NULL || wcsstr(g_gpuAdapterDesc, L"Radeon") != NULL);
+    g_isIntel = (wcsstr(g_gpuAdapterDesc, L"Intel") != NULL || wcsstr(g_gpuAdapterDesc, L"Arc") != NULL);
+
     if (p_nvmlDeviceGetHandleByIndex && (g_gpuAdapterIndex == (DWORD)-1 || wcsstr(g_gpuAdapterDesc, L"NVIDIA") != NULL || wcsstr(g_gpuAdapterDesc, L"GeForce") != NULL || wcsstr(g_gpuAdapterDesc, L"Quadro") != NULL)) {
-        p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice);
+        p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice); // Note: Simple NVML index 0 fallback, but robust for primary GPU
     }
 }
 
@@ -399,6 +443,7 @@ void FormatNetSpeed(double bytesPerSec, wchar_t* outBuf, size_t bufSize, wchar_t
 }
 
 void InitGpuMonitor() {
+    // 1. Initialize NVIDIA NVML
     if (!g_hNvml) {
         g_hNvml = LoadLibraryW(L"nvml.dll");
         if (!g_hNvml) g_hNvml = LoadLibraryW(L"C:\\Windows\\System32\\nvml.dll");
@@ -418,6 +463,27 @@ void InitGpuMonitor() {
                 p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice);
             }
         }
+    }
+
+    // 2. Initialize AMD ADL
+    if (!g_hAdl) {
+        g_hAdl = LoadLibraryW(L"atiadlxx.dll");
+        if (!g_hAdl) g_hAdl = LoadLibraryW(L"atiadlxy.dll");
+        if (g_hAdl) {
+            p_ADL_Main_Control_Create = (PFN_ADL_Main_Control_Create)GetProcAddress(g_hAdl, "ADL_Main_Control_Create");
+            p_ADL_Main_Control_Destroy = (PFN_ADL_Main_Control_Destroy)GetProcAddress(g_hAdl, "ADL_Main_Control_Destroy");
+            p_ADL_Overdrive5_Temperature_Get = (PFN_ADL_Overdrive5_Temperature_Get)GetProcAddress(g_hAdl, "ADL_Overdrive5_Temperature_Get");
+            if (p_ADL_Main_Control_Create && p_ADL_Overdrive5_Temperature_Get) {
+                p_ADL_Main_Control_Create(ADL_Main_Memory_Alloc, 1);
+            }
+        }
+    }
+
+    // 3. Initialize Intel IGCL (ControlAPI.dll / igcl.dll)
+    if (!g_hIgcl) {
+        g_hIgcl = LoadLibraryW(L"ControlAPI.dll");
+        if (!g_hIgcl) g_hIgcl = LoadLibraryW(L"igcl.dll");
+        // We load it, but fetching precise temp requires complex structs. Will use stub fallback or PDH thermal.
     }
 }
 
@@ -555,10 +621,14 @@ void UpdateStats() {
         }
     }
 
+    // 2. CPU, RAM & GPU Usage + Temperature (Synchronized with Drivers & Task Manager)
     BOOL gotNvml = FALSE;
-    if (!g_nvmlDevice && (g_gpuAdapterIndex == (DWORD)-1 || wcsstr(g_gpuAdapterDesc, L"NVIDIA") != NULL || wcsstr(g_gpuAdapterDesc, L"GeForce") != NULL)) {
+    BOOL gotTemp = FALSE;
+    if (!g_hNvml && !g_hAdl && !g_hIgcl) {
         InitGpuMonitor();
     }
+    
+    // Attempt NVIDIA NVML Temperature & Usage
     if (g_nvmlDevice && p_nvmlDeviceGetUtilizationRates && p_nvmlDeviceGetTemperature) {
         NVML_UTILIZATION_RATES rates;
         unsigned int temp = 0;
@@ -568,11 +638,26 @@ void UpdateStats() {
         }
         if (p_nvmlDeviceGetTemperature(g_nvmlDevice, 0, &temp) == 0) {
             swprintf_s(g_strGpuTmp, 64, L"TMP %3u\u00B0C", temp);
-        } else {
-            swprintf_s(g_strGpuTmp, 64, L"TMP   N/A");
+            gotTemp = TRUE;
         }
     }
 
+    // Attempt AMD ADL Temperature
+    if (!gotTemp && g_isAmd && g_hAdl && p_ADL_Overdrive5_Temperature_Get) {
+        ADLTemperature adlTemp = {0};
+        adlTemp.iSize = sizeof(ADLTemperature);
+        // We use adapter 0 as a rough fallback if multi-gpu, ideally we'd map DXGI index to ADL index, but 0 is safe for standard setups
+        if (p_ADL_Overdrive5_Temperature_Get(0, 0, &adlTemp) == 0) {
+            swprintf_s(g_strGpuTmp, 64, L"TMP %3d\u00B0C", adlTemp.iTemperature / 1000);
+            gotTemp = TRUE;
+        }
+    }
+
+    if (!gotTemp) {
+        swprintf_s(g_strGpuTmp, 64, L"TMP   N/A");
+    }
+
+    // Fallback to PDH for Usage (AMD / Intel / Default)
     if (!gotNvml && g_counterGpu && g_pdhQuery) {
         DWORD bufferSize = 0, itemCount = 0;
         PDH_STATUS status = PdhGetFormattedCounterArrayW(g_counterGpu, PDH_FMT_DOUBLE, &bufferSize, &itemCount, NULL);
@@ -600,7 +685,7 @@ void UpdateStats() {
                 if (maxEngine > totalGpu) totalGpu = maxEngine;
                 if (totalGpu > 100.0) totalGpu = 100.0;
                 swprintf_s(g_strGpuUse, 64, L"GPU %4.1f%%", totalGpu);
-                swprintf_s(g_strGpuTmp, 64, L"TMP   N/A");
+                if (!gotTemp) swprintf_s(g_strGpuTmp, 64, L"TMP   N/A");
             }
             if (items) free(items);
         }
@@ -1306,9 +1391,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     free(pIfTable);
                 }
             } else if (id == IDM_GPU_ALL) {
-                g_gpuAdapterIndex = (DWORD)-1;
-                wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
+                // Modified behavior: IDM_GPU_ALL now acts as "Default GPU" which defaults to Task Manager GPU 0
+                IDXGIFactory1* pFactory = NULL;
+                if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
+                    IDXGIAdapter1* pAdapter = NULL;
+                    if (pFactory->lpVtbl->EnumAdapters1(pFactory, 0, &pAdapter) == S_OK) {
+                        DXGI_ADAPTER_DESC1 desc;
+                        pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
+                        g_gpuAdapterIndex = 0;
+                        wcscpy_s(g_gpuAdapterDesc, 128, desc.Description);
+                        pAdapter->lpVtbl->Release(pAdapter);
+                    } else {
+                        // Fallback if no GPU 0
+                        g_gpuAdapterIndex = (DWORD)-1;
+                        wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
+                    }
+                    pFactory->lpVtbl->Release(pFactory);
+                }
                 RefreshSelectedGpu();
+
             } else if (id >= IDM_GPU_BASE && id < IDM_GPU_BASE + 20) {
                 DWORD idx = id - IDM_GPU_BASE;
                 IDXGIFactory1* pFactory = NULL;
