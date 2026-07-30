@@ -1298,10 +1298,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             IDXGIFactory1* pFactory = NULL;
             if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
                 IDXGIAdapter1* pAdapter = NULL;
+                LUID seenLuids[20];
+                int seenCount = 0;
                 for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND && i < 20; ++i) {
                     DXGI_ADAPTER_DESC1 desc;
                     pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
-                    if ((desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 && wcsstr(desc.Description, L"Basic Render Driver") == NULL) {
+                    
+                    BOOL duplicate = FALSE;
+                    for (int j = 0; j < seenCount; j++) {
+                        if (seenLuids[j].LowPart == desc.AdapterLuid.LowPart && seenLuids[j].HighPart == desc.AdapterLuid.HighPart) {
+                            duplicate = TRUE;
+                            break;
+                        }
+                    }
+
+                    if (!duplicate && (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 && wcsstr(desc.Description, L"Basic Render Driver") == NULL) {
+                        seenLuids[seenCount++] = desc.AdapterLuid;
                         wchar_t wGpuItem[256];
                         swprintf_s(wGpuItem, 256, L"GPU %u: %s", i, desc.Description);
                         BOOL checked = (g_gpuAdapterIndex == i);
