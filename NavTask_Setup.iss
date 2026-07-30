@@ -2,7 +2,7 @@
 ; Inno Setup Script - Official Windows 11 Release Installer
 
 #define MyAppName "NavTask Monitor"
-#define MyAppVersion "10.4.1"
+#define MyAppVersion "10.5"
 #define MyAppPublisher "Mauro Carvalho"
 #define MyAppURL "mailto:mauroroberto83@gmail.com"
 #define MyAppExeName "NavTask.exe"
@@ -22,7 +22,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=.\LICENSE
 OutputDir=.\Release
-OutputBaseFilename=NavTask_Setup_v10.4.1
+OutputBaseFilename=NavTask_Setup_v10.5
 SetupIconFile=.\navtask.ico
 UninstallDisplayIcon={app}\navtask.ico
 AppMutex=NavTask_SingleInstance_Mutex
@@ -41,7 +41,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Start NavTask automatically when Windows starts (Recommended)"; GroupDescription: "Windows Startup:"
 
 [Files]
-Source: ".\Release\NavTask_Portable_v10.4.1.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+Source: ".\Release\NavTask_Portable_v10.5.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 Source: ".\navtask.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
