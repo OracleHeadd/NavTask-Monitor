@@ -1342,7 +1342,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (id == IDM_ABOUT) {
                 g_hHookMessageBox = SetWindowsHookEx(WH_CBT, CBTMessageBoxProc, NULL, GetCurrentThreadId());
                 MessageBoxW(NULL, 
-                    L"NavTask Monitor v10.4 for Windows 11\n\n"
+                    L"NavTask Monitor v10.4.1 for Windows 11\n\n"
                     L"Developed by: Mauro Carvalho\n"
                     L"Contact / Support: mauroroberto83@gmail.com\n"
                     L"License: Open-Source (Freeware / MIT)\n\n"

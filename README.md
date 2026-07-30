@@ -50,7 +50,7 @@ An ultra-lightweight performance telemetry utility engineered specifically for W
 
 ---
 
-### Setup Installer (NavTask_Setup_v10.4.exe)
+### Setup Installer (NavTask_Setup_v10.4.1.exe)
 - Compiled via the modern Inno Setup 6 engine with full WizardStyle implementation.
 - Dual Installation Scopes: Offers interactive initial selection between "Install for me only" (deploys to user local profile without Administrator elevation requirements) and "Install for all users" (system-wide deployment to Program Files).
 - Registers standard system uninstallation procedures natively within Windows Settings and Add/Remove Programs (appwiz.cpl).
@@ -67,7 +67,7 @@ To compile the application binary and installer directly from source on Windows 
 windres navtask.rc -O coff -o navtask.res
 
 # 2. Compile the standalone portable executable with required DXGI/NVML kernel linking flags
-gcc -O2 -mwindows navtask.c navtask.res -o Release/NavTask_Portable_v10.4.exe -liphlpapi -lpdh -lgdi32 -luser32 -lshell32 -ldxgi -luuid -Wall
+gcc -O2 -mwindows navtask.c navtask.res -o Release/NavTask_Portable_v10.4.1.exe -liphlpapi -lpdh -lgdi32 -luser32 -lshell32 -ldxgi -luuid -Wall
 
 # 3. Compile the modern setup installation wizard using Inno Setup Compiler
 iscc NavTask_Setup.iss
