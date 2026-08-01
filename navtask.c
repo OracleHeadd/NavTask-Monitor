@@ -1,4 +1,4 @@
-#define _WIN32_WINNT 0x0601
+﻿#define _WIN32_WINNT 0x0601
 #include <windows.h>
 #include <winreg.h>
 #include <shlobj.h>
@@ -551,7 +551,7 @@ void UpdateStats() {
                     if (strstr(desc, "Miniport") || strstr(desc, "miniport") || strstr(desc, "Loopback") || 
                         strstr(desc, "Virtual") || strstr(desc, "virtual") || strstr(desc, "Teredo") || 
                         strstr(desc, "Pseudo") || strstr(desc, "Kernel") || strstr(desc, "Filter") || 
-                        strstr(desc, "ISATAP") || pIfTable->table[i].dwPhysAddrLen != 6) {
+                        strstr(desc, "ISATAP") || strstr(desc, "QoS") || strstr(desc, "qos") || pIfTable->table[i].dwPhysAddrLen != 6) {
                         continue;
                     }
                     if (g_netInterfaceIndex == (DWORD)-1 || pIfTable->table[i].dwIndex == g_netInterfaceIndex) {
@@ -1275,7 +1275,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                             if (strstr(desc, "Miniport") || strstr(desc, "miniport") || strstr(desc, "Loopback") || 
                                 strstr(desc, "Virtual") || strstr(desc, "virtual") || strstr(desc, "Teredo") || 
                                 strstr(desc, "Pseudo") || strstr(desc, "Kernel") || strstr(desc, "Filter") || 
-                                strstr(desc, "ISATAP") || pIfTable->table[i].dwPhysAddrLen != 6) {
+                                strstr(desc, "ISATAP") || strstr(desc, "QoS") || strstr(desc, "qos") || pIfTable->table[i].dwPhysAddrLen != 6) {
                                 continue;
                             }
                             wchar_t wDescr[128];
@@ -1354,7 +1354,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (id == IDM_ABOUT) {
                 g_hHookMessageBox = SetWindowsHookEx(WH_CBT, CBTMessageBoxProc, NULL, GetCurrentThreadId());
                 MessageBoxW(NULL, 
-                    L"NavTask Monitor v10.5 for Windows 11\n\n"
+                    L"NavTask Monitor v10.6 for Windows 11\n\n"
                     L"Developed by: Mauro Carvalho\n"
                     L"Contact / Support: mauroroberto83@gmail.com\n"
                     L"License: Open-Source (Freeware / MIT)\n\n"
