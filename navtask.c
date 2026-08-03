@@ -1,4 +1,4 @@
-﻿#define _WIN32_WINNT 0x0601
+#define _WIN32_WINNT 0x0601
 #include <windows.h>
 #include <winreg.h>
 #include <shlobj.h>
@@ -13,6 +13,17 @@
 #include <string.h>
 #include <initguid.h>
 #include <dxgi.h>
+#include <dxgi1_6.h>
+
+HRESULT CreateDXGIFactory6(IDXGIFactory6** ppFactory6) {
+    IDXGIFactory1* pFactory1 = NULL;
+    if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory1) == S_OK) {
+        HRESULT hr = pFactory1->lpVtbl->QueryInterface(pFactory1, &IID_IDXGIFactory6, (void**)ppFactory6);
+        pFactory1->lpVtbl->Release(pFactory1);
+        return hr;
+    }
+    return E_FAIL;
+}
 
 #pragma comment(lib, "shlobj.lib")
 #pragma comment(lib, "shell32.lib")
@@ -133,13 +144,13 @@ void RefreshSelectedGpu() {
         return;
     }
 
-    IDXGIFactory1* pFactory = NULL;
-    if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
+    IDXGIFactory6* pFactory = NULL;
+    if (CreateDXGIFactory6(&pFactory) == S_OK) {
         IDXGIAdapter1* pAdapter = NULL;
         BOOL found = FALSE;
         
         // 1. Try to match EXACT index AND description to avoid duplicate GPU selection bug
-        for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+        for (UINT i = 0; pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, i, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
             DXGI_ADAPTER_DESC1 desc;
             pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
             if (i == g_gpuAdapterIndex && wcscmp(desc.Description, g_gpuAdapterDesc) == 0) {
@@ -154,7 +165,7 @@ void RefreshSelectedGpu() {
         
         // 2. If index doesn't match (e.g. unplugged display shifting indices), fallback to first description match
         if (!found) {
-            for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+            for (UINT i = 0; pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, i, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
                 DXGI_ADAPTER_DESC1 desc;
                 pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
                 if (wcscmp(desc.Description, g_gpuAdapterDesc) == 0) {
@@ -1292,15 +1303,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hNetMenu, L"Select Network Interface");
             
             HMENU hGpuMenu = CreatePopupMenu();
-            AppendMenuW(hGpuMenu, MF_STRING | (g_gpuAdapterIndex == (DWORD)-1 ? MF_CHECKED : MF_UNCHECKED), IDM_GPU_ALL, L"Default GPU");
+            IDXGIFactory6* pFactory = NULL;
+            BOOL hasDXGI6 = (CreateDXGIFactory6(&pFactory) == S_OK);
+            
+            if (hasDXGI6) {
+                AppendMenuW(hGpuMenu, MF_STRING | (g_gpuAdapterIndex == (DWORD)-1 ? MF_CHECKED : MF_UNCHECKED), IDM_GPU_ALL, L"Default GPU");
+            } else {
+                AppendMenuW(hGpuMenu, MF_STRING | MF_GRAYED, IDM_GPU_ALL, L"no IDXGI support on this system");
+            }
             AppendMenuW(hGpuMenu, MF_SEPARATOR, 0, NULL);
 
-            IDXGIFactory1* pFactory = NULL;
-            if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
+            if (hasDXGI6) {
                 IDXGIAdapter1* pAdapter = NULL;
                 LUID seenLuids[20];
                 int seenCount = 0;
-                for (UINT i = 0; pFactory->lpVtbl->EnumAdapters1(pFactory, i, &pAdapter) != DXGI_ERROR_NOT_FOUND && i < 20; ++i) {
+                for (UINT i = 0; pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, i, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) != DXGI_ERROR_NOT_FOUND && i < 20; ++i) {
                     DXGI_ADAPTER_DESC1 desc;
                     pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
                     
@@ -1313,7 +1330,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
 
                     if (!duplicate && (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 && wcsstr(desc.Description, L"Basic Render Driver") == NULL) {
-                        seenLuids[seenCount++] = desc.AdapterLuid;
+                        seenLuids[seenCount] = desc.AdapterLuid;
+                        seenCount++;
                         wchar_t wGpuItem[256];
                         swprintf_s(wGpuItem, 256, L"GPU %u: %s", i, desc.Description);
                         BOOL checked = (g_gpuAdapterIndex == i);
@@ -1354,7 +1372,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (id == IDM_ABOUT) {
                 g_hHookMessageBox = SetWindowsHookEx(WH_CBT, CBTMessageBoxProc, NULL, GetCurrentThreadId());
                 MessageBoxW(NULL, 
-                    L"NavTask Monitor v10.6 for Windows 11\n\n"
+                    L"NavTask Monitor v10.7 for Windows 11\n\n"
                     L"Developed by: Mauro Carvalho\n"
                     L"Contact / Support: mauroroberto83@gmail.com\n"
                     L"License: Open-Source (Freeware / MIT)\n\n"
@@ -1404,10 +1422,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 }
             } else if (id == IDM_GPU_ALL) {
                 // Modified behavior: IDM_GPU_ALL now acts as "Default GPU" which defaults to Task Manager GPU 0
-                IDXGIFactory1* pFactory = NULL;
-                if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
+                IDXGIFactory6* pFactory = NULL;
+                if (CreateDXGIFactory6(&pFactory) == S_OK) {
                     IDXGIAdapter1* pAdapter = NULL;
-                    if (pFactory->lpVtbl->EnumAdapters1(pFactory, 0, &pAdapter) == S_OK) {
+                    if (pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, 0, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) == S_OK) {
                         DXGI_ADAPTER_DESC1 desc;
                         pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
                         g_gpuAdapterIndex = 0;
@@ -1424,10 +1442,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             } else if (id >= IDM_GPU_BASE && id < IDM_GPU_BASE + 20) {
                 DWORD idx = id - IDM_GPU_BASE;
-                IDXGIFactory1* pFactory = NULL;
-                if (CreateDXGIFactory1(&IID_IDXGIFactory1, (void**)&pFactory) == S_OK) {
+                IDXGIFactory6* pFactory = NULL;
+                if (CreateDXGIFactory6(&pFactory) == S_OK) {
                     IDXGIAdapter1* pAdapter = NULL;
-                    if (pFactory->lpVtbl->EnumAdapters1(pFactory, idx, &pAdapter) == S_OK) {
+                    if (pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, idx, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) == S_OK) {
                         DXGI_ADAPTER_DESC1 desc;
                         pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
                         g_gpuAdapterIndex = idx;

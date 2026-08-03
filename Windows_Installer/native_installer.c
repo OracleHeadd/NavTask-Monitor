@@ -1,4 +1,4 @@
-﻿#define _WIN32_WINNT 0x0601
+#define _WIN32_WINNT 0x0601
 #include <windows.h>
 #include <shlobj.h>
 #include <stdio.h>
@@ -59,7 +59,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 2. Standard Installation Wizard Flow
     int resp = MessageBoxW(NULL, 
-        L"Welcome to NavTask Monitor v10.6 Setup for Windows 11 & 10!\n\n"
+        L"Welcome to NavTask Monitor v10.7 Setup for Windows 11 & 10!\n\n"
         L"Developer: Mauro Carvalho (mauroroberto83@gmail.com)\n"
         L"License: 100% Freeware (Open-Source)\n\n"
         L"Once installed, NavTask Monitor becomes an ultra-lightweight telemetry fixture on your Windows Taskbar that wakes up automatically with your computer.\n\n"
@@ -92,7 +92,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GetCurrentDirectoryW(MAX_PATH, currentDir);
 
     wchar_t srcExe[MAX_PATH];
-    swprintf_s(srcExe, MAX_PATH, L"%s\\..\\Release\\NavTask_Portable_v10.6.exe", currentDir);
+    swprintf_s(srcExe, MAX_PATH, L"%s\\..\\Release\\NavTask_Portable_v10.7.exe", currentDir);
     if (GetFileAttributesW(srcExe) == INVALID_FILE_ATTRIBUTES) {
         swprintf_s(srcExe, MAX_PATH, L"%s\\..\\NavTask.exe", currentDir);
         if (GetFileAttributesW(srcExe) == INVALID_FILE_ATTRIBUTES) {
@@ -105,11 +105,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     Sleep(500);
 
     if (!CopyFileW(srcExe, destExe, FALSE)) {
-        CopyFileW(L".\\Release\\NavTask_Portable_v10.6.exe", destExe, FALSE);
+        CopyFileW(L".\\Release\\NavTask_Portable_v10.7.exe", destExe, FALSE);
     }
 
     if (GetFileAttributesW(destExe) == INVALID_FILE_ATTRIBUTES) {
-        MessageBoxW(NULL, L"Could not copy NavTask executable to target installation directory.\nPlease ensure NavTask_Portable_v10.6.exe exists in the Release folder.", 
+        MessageBoxW(NULL, L"Could not copy NavTask executable to target installation directory.\nPlease ensure NavTask_Portable_v10.7.exe exists in the Release folder.", 
                     L"Installation Error", MB_OK | MB_ICONERROR);
         return 1;
     }
