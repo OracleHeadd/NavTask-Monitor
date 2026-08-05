@@ -126,6 +126,8 @@ DWORD g_gpuAdapterIndex = (DWORD)-1; // -1 = All Hardware GPUs / Automatic
 wchar_t g_gpuAdapterDesc[128] = L"ALL";
 DWORD g_gpuAdapterLuidHigh = 0;
 DWORD g_gpuAdapterLuidLow = 0;
+int g_nvmlIndex = 0;
+int g_adlIndex = 0;
 BOOL g_allowExit = FALSE;
 
 void RefreshSelectedGpu() {
@@ -136,11 +138,32 @@ void RefreshSelectedGpu() {
     if (g_gpuAdapterIndex == (DWORD)-1 || _wcsicmp(g_gpuAdapterDesc, L"ALL") == 0) {
         g_gpuAdapterIndex = (DWORD)-1;
         wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
+        
+        IDXGIFactory6* pFactory = NULL;
+        if (CreateDXGIFactory6(&pFactory) == S_OK) {
+            IDXGIAdapter1* pAdapter = NULL;
+            if (pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, 0, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) == S_OK) {
+                DXGI_ADAPTER_DESC1 desc;
+                pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
+                g_gpuAdapterLuidHigh = desc.AdapterLuid.HighPart;
+                g_gpuAdapterLuidLow = desc.AdapterLuid.LowPart;
+                
+                g_isAmd = (wcsstr(desc.Description, L"AMD") != NULL || wcsstr(desc.Description, L"Radeon") != NULL);
+                g_isIntel = (wcsstr(desc.Description, L"Intel") != NULL || wcsstr(desc.Description, L"Arc") != NULL);
+                pAdapter->lpVtbl->Release(pAdapter);
+            }
+            pFactory->lpVtbl->Release(pFactory);
+        } else {
+            g_isAmd = FALSE;
+            g_isIntel = FALSE;
+        }
+
+        g_nvmlIndex = 0;
+        g_adlIndex = 0;
+
         if (p_nvmlDeviceGetHandleByIndex) {
             p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice);
         }
-        g_isAmd = FALSE;
-        g_isIntel = FALSE;
         return;
     }
 
@@ -179,6 +202,24 @@ void RefreshSelectedGpu() {
                 pAdapter->lpVtbl->Release(pAdapter);
             }
         }
+        if (found) {
+            g_nvmlIndex = 0;
+            g_adlIndex = 0;
+            IDXGIAdapter1* pTempAdapter = NULL;
+            for (UINT i = 0; i < g_gpuAdapterIndex; ++i) {
+                if (pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, i, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pTempAdapter) == S_OK) {
+                    DXGI_ADAPTER_DESC1 tempDesc;
+                    pTempAdapter->lpVtbl->GetDesc1(pTempAdapter, &tempDesc);
+                    if (wcsstr(tempDesc.Description, L"NVIDIA") != NULL || wcsstr(tempDesc.Description, L"GeForce") != NULL || wcsstr(tempDesc.Description, L"Quadro") != NULL) {
+                        g_nvmlIndex++;
+                    }
+                    if (wcsstr(tempDesc.Description, L"AMD") != NULL || wcsstr(tempDesc.Description, L"Radeon") != NULL) {
+                        g_adlIndex++;
+                    }
+                    pTempAdapter->lpVtbl->Release(pTempAdapter);
+                }
+            }
+        }
         pFactory->lpVtbl->Release(pFactory);
         if (!found) {
             g_gpuAdapterIndex = (DWORD)-1;
@@ -191,7 +232,7 @@ void RefreshSelectedGpu() {
     g_isIntel = (wcsstr(g_gpuAdapterDesc, L"Intel") != NULL || wcsstr(g_gpuAdapterDesc, L"Arc") != NULL);
 
     if (p_nvmlDeviceGetHandleByIndex && (g_gpuAdapterIndex == (DWORD)-1 || wcsstr(g_gpuAdapterDesc, L"NVIDIA") != NULL || wcsstr(g_gpuAdapterDesc, L"GeForce") != NULL || wcsstr(g_gpuAdapterDesc, L"Quadro") != NULL)) {
-        p_nvmlDeviceGetHandleByIndex(0, &g_nvmlDevice); // Note: Simple NVML index 0 fallback, but robust for primary GPU
+        p_nvmlDeviceGetHandleByIndex(g_nvmlIndex, &g_nvmlDevice); // Now correctly selects the Nth NVIDIA GPU matching DXGI selection
     }
 }
 
@@ -657,8 +698,8 @@ void UpdateStats() {
     if (!gotTemp && g_isAmd && g_hAdl && p_ADL_Overdrive5_Temperature_Get) {
         ADLTemperature adlTemp = {0};
         adlTemp.iSize = sizeof(ADLTemperature);
-        // We use adapter 0 as a rough fallback if multi-gpu, ideally we'd map DXGI index to ADL index, but 0 is safe for standard setups
-        if (p_ADL_Overdrive5_Temperature_Get(0, 0, &adlTemp) == 0) {
+        // We mapped DXGI index to ADL index using g_adlIndex
+        if (p_ADL_Overdrive5_Temperature_Get(g_adlIndex, 0, &adlTemp) == 0) {
             swprintf_s(g_strGpuTmp, 64, L"TMP %3d\u00B0C", adlTemp.iTemperature / 1000);
             gotTemp = TRUE;
         }
@@ -1372,7 +1413,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (id == IDM_ABOUT) {
                 g_hHookMessageBox = SetWindowsHookEx(WH_CBT, CBTMessageBoxProc, NULL, GetCurrentThreadId());
                 MessageBoxW(NULL, 
-                    L"NavTask Monitor v10.7 for Windows 11\n\n"
+                    L"NavTask Monitor v10.8 for Windows 11\n\n"
                     L"Developed by: Mauro Carvalho\n"
                     L"Contact / Support: mauroroberto83@gmail.com\n"
                     L"License: Open-Source (Freeware / MIT)\n\n"
@@ -1421,23 +1462,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     free(pIfTable);
                 }
             } else if (id == IDM_GPU_ALL) {
-                // Modified behavior: IDM_GPU_ALL now acts as "Default GPU" which defaults to Task Manager GPU 0
-                IDXGIFactory6* pFactory = NULL;
-                if (CreateDXGIFactory6(&pFactory) == S_OK) {
-                    IDXGIAdapter1* pAdapter = NULL;
-                    if (pFactory->lpVtbl->EnumAdapterByGpuPreference(pFactory, 0, DXGI_GPU_PREFERENCE_UNSPECIFIED, &IID_IDXGIAdapter1, (void**)&pAdapter) == S_OK) {
-                        DXGI_ADAPTER_DESC1 desc;
-                        pAdapter->lpVtbl->GetDesc1(pAdapter, &desc);
-                        g_gpuAdapterIndex = 0;
-                        wcscpy_s(g_gpuAdapterDesc, 128, desc.Description);
-                        pAdapter->lpVtbl->Release(pAdapter);
-                    } else {
-                        // Fallback if no GPU 0
-                        g_gpuAdapterIndex = (DWORD)-1;
-                        wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
-                    }
-                    pFactory->lpVtbl->Release(pFactory);
-                }
+                g_gpuAdapterIndex = (DWORD)-1;
+                wcscpy_s(g_gpuAdapterDesc, 128, L"ALL");
                 RefreshSelectedGpu();
 
             } else if (id >= IDM_GPU_BASE && id < IDM_GPU_BASE + 20) {
